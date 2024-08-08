@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"; // rea
 
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"; // react-query-devtools
 
-import Toaster from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 
 import AppLayout from "./ui/AppLayout";
 import GlobalStyles from "./styles/GlobalStyles";
