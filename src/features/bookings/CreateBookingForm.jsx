@@ -1,5 +1,5 @@
 import { Controller, useForm } from "react-hook-form";
-import { add, format } from "date-fns";
+import { add, format, isBefore, isSameDay } from "date-fns";
 
 import FormRow from "../cabins/FormRow";
 import Button from "../../ui/Button";
@@ -23,6 +23,7 @@ import { useCreateBooking } from "./useCreateBooking";
 
 function CreateBookingForm() {
   const { createBooking, isCreating } = useCreateBooking();
+
   const {
     register,
     handleSubmit,
@@ -32,7 +33,12 @@ function CreateBookingForm() {
     getValues,
     setValue,
     watch,
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      hasBreakfast: false,
+      isPaid: false,
+    },
+  });
 
   const { errors } = formState;
 
@@ -94,6 +100,26 @@ function CreateBookingForm() {
       ? `${formatCurrency(currentCabin?.regularPrice + breakfastPrice)}`
       : `${formatCurrency(currentCabin?.regularPrice)}`;
 
+  const bookingValidation = {
+    guestId: {
+      required: "Please select a guest",
+    },
+    numGuests: {
+      required: "Please select number of guests",
+      min: {
+        value: 1,
+        message: "You must select at least one guest",
+      },
+      max: {
+        value: currentCabin?.maxCapacity,
+        message: `Maximum number of guests must be ${currentCabin?.maxCapacity}`,
+      },
+    },
+    cabinId: {
+      required: "Please select a cabin",
+    },
+  };
+
   function onSubmit(data) {
     const cabinPrice =
       (currentCabin.regularPrice - currentCabin.discount) * calcNumNights;
@@ -121,7 +147,7 @@ function CreateBookingForm() {
     };
 
     console.log(finalData);
-    createBooking(finalData);
+    // createBooking(finalData);
   }
 
   return (
@@ -130,6 +156,7 @@ function CreateBookingForm() {
         <Controller
           name="guestId"
           control={control}
+          rules={bookingValidation.guestId}
           render={({ field }) => <Select {...field} options={guestsOptions} />}
         />
       </FormRow>
@@ -138,13 +165,15 @@ function CreateBookingForm() {
         <Controller
           name="cabinId"
           control={control}
+          rules={bookingValidation.cabinId}
           render={({ field }) => <Select {...field} options={cabinOptions} />}
         />
       </FormRow>
-      <FormRow label="Number Of Guests" error={errors?.name?.message}>
+      <FormRow label="Number Of Guests" error={errors?.numGuests?.message}>
         <Controller
           name="numGuests"
           control={control}
+          rules={bookingValidation.numGuests}
           render={({ field }) => (
             <Select
               {...field}
@@ -177,15 +206,31 @@ function CreateBookingForm() {
         />
       </FormRow>
 
-      <FormRow label="Booking Dates">
+      <FormRow label="Check-In " error={errors?.startDate?.message}>
         <Input
-          {...register("startDate")}
+          {...register("startDate", {
+            required: "Check In Date Required",
+            validate: {
+              isSameDate: (value) =>
+                !isSameDay(value, getValues("endDate")) ||
+                "Check In Date and Check Out Date Must Be Different",
+            },
+          })}
           name="startDate"
           type="date"
           defaultValue={format(new Date(), "yyyy-MM-dd")}
         />
+      </FormRow>
+      <FormRow label="Check-Out" error={errors?.endDate?.message}>
         <Input
-          {...register("endDate")}
+          {...register("endDate", {
+            required: "Check Out Date Is Required",
+            validate: {
+              isCheckOutBefore: (value) =>
+                !isBefore(value, getValues("startDate")) ||
+                "Check Out Cannot Be Before Check In",
+            },
+          })}
           name="endDate"
           type="date"
           defaultValue={format(add(new Date(), { days: 1 }), "yyyy-MM-dd")}
